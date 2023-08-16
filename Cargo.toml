@@ -1,0 +1,19 @@
+[package]
+name = "yolov8"
+version = "0.1.0"
+edition = "2021"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+tch = { version = "0.13.0", optional = true }
+image = "0.24.0"
+rusttype = "0.9.3"
+imageproc = "0.23.0"
+ndarray = { version = "0.15.6", optional = true }
+ort = { version = "1.15.2", optional = true }
+
+[features]
+default = ["onnx"]
+onnx = ["ndarray", "ort"]
+full = ["tch","onnx"]
