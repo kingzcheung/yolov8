@@ -6,7 +6,7 @@ use std::{
 use crate::bbox::{iou, Bbox};
 use image::{imageops::FilterType, GenericImageView, DynamicImage};
 use ndarray::{s, Array, Axis, IxDyn};
-use ort::{Environment, Session, SessionBuilder,Value};
+use ort::{Environment, Session, SessionBuilder,Value, ExecutionProvider};
 
 pub struct YOLOv8 {
     model: Session,
@@ -18,8 +18,10 @@ impl YOLOv8 {
         P: AsRef<Path>,
     {
         let env = Arc::new(Environment::builder().with_name("YOLOv8").build()?);
-
-        let model = SessionBuilder::new(&env)?.with_model_from_file(onnx_file)?;
+        let execution_providers = &[ExecutionProvider::CPU(Default::default())];
+        let model = SessionBuilder::new(&env)?
+        .with_execution_providers(execution_providers)?
+        .with_model_from_file(onnx_file)?;
         Ok(Self { model })
     }
 
