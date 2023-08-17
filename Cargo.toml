@@ -13,6 +13,10 @@ imageproc = "0.23.0"
 ndarray = { version = "0.15.6", optional = true }
 ort = { version = "1.15.2", optional = true }
 
+[dev-dependencies]
+reqwest = { version = "0.11", features = ["json"] }
+tokio = { version = "1", features = ["full"] }
+
 [features]
 default = ["onnx"]
 onnx = ["ndarray", "ort"]

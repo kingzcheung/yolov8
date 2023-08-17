@@ -115,17 +115,3 @@ impl YOLOv8 {
         result
     }
 }
-
-#[cfg(test)]
-mod test {
-
-    #[test]
-    fn predict() {
-        let onnx_file = "testdata/best.onnx";
-        let yolo: super::YOLOv8 = super::YOLOv8::new(onnx_file).unwrap();
-        let img = include_bytes!("../testdata/testssss.jpg");
-        let image = image::load_from_memory_with_format(img, image::ImageFormat::Jpeg).unwrap();
-        let res = yolo.predict(image).unwrap();
-        dbg!(res);
-    }
-}
