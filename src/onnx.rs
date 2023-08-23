@@ -27,7 +27,9 @@ impl YOLOv8 {
     }
 
     pub fn predict(&self, image:DynamicImage) -> Result<Vec<Bbox>, ort::OrtError> {
+        let start_time = Instant::now();
         let (input, img_width, img_height) = self.prepare_input(image);
+        println!("prepare input time:{} ms", start_time.elapsed().as_millis());
         let start_time = Instant::now();
         let output = self.run_model(input)?;
         println!("onnx inference time:{} ms", start_time.elapsed().as_millis());
