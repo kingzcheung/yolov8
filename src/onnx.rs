@@ -8,6 +8,7 @@ use image::{imageops::FilterType, GenericImageView, DynamicImage};
 use ndarray::{s, Array, Axis, IxDyn};
 use ort::{Environment, Session, SessionBuilder,Value, ExecutionProvider};
 
+#[derive(Debug,Clone)]
 pub struct YOLOv8 {
     model: Session,
 }
