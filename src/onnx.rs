@@ -31,7 +31,9 @@ impl YOLOv8 {
         let start_time = Instant::now();
         let output = self.run_model(input)?;
         println!("onnx inference time:{} ms", start_time.elapsed().as_millis());
+        let start_time = Instant::now();
         let res = self.process_output(output, img_width, img_height);
+        println!("onnx process time:{} ms", start_time.elapsed().as_millis());
         Ok(res)
     }
 
