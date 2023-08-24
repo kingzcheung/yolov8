@@ -4,8 +4,8 @@ use std::{
 };
 
 use crate::bbox::{iou, Bbox};
-use image::{imageops::FilterType, GenericImageView, DynamicImage};
-use ndarray::{s, Array, Axis, IxDyn};
+use image::{imageops::FilterType, GenericImageView, DynamicImage, Pixel};
+use ndarray::{s, Array, Axis, IxDyn, IxDynImpl, Dim, CowRepr, ArrayBase};
 use ort::{Environment, Session, SessionBuilder,Value, ExecutionProvider};
 
 #[derive(Debug,Clone)]
@@ -28,33 +28,58 @@ impl YOLOv8 {
 
     pub fn predict(&self, image:DynamicImage) -> Result<Vec<Bbox>, ort::OrtError> {
         let start_time = Instant::now();
-        let (input, img_width, img_height) = self.prepare_input(image);
+        let (input, img_width, img_height) = self.prepare_input2(image);
         println!("prepare input time:{} ms", start_time.elapsed().as_millis());
         let start_time = Instant::now();
         let output = self.run_model(input)?;
         println!("onnx inference time:{} ms", start_time.elapsed().as_millis());
-        let start_time = Instant::now();
         let res = self.process_output(output, img_width, img_height);
-        println!("onnx process time:{} ms", start_time.elapsed().as_millis());
         Ok(res)
     }
 
+    #[allow(dead_code)]
     fn prepare_input(&self, img: DynamicImage) -> (Array<f32, IxDyn>, u32, u32) {
         // let img: image::DynamicImage = image::load_from_memory_with_format(&buf, image::ImageFormat::Jpeg).unwrap();
         let (img_width, img_height) = (img.width(), img.height());
-        let img = img.resize_exact(640, 640, FilterType::CatmullRom);
+        let img = img.resize_exact(640, 640, FilterType::Nearest);
+        
+        // input 赋值太慢了
         let mut input = Array::zeros((1, 3, 640, 640)).into_dyn();
-        for pixel in img.pixels() {
+        
+        let piexls = img.pixels();
+        
+        for pixel in piexls {
+            
             let x = pixel.0 as usize;
             let y = pixel.1 as usize;
-            let [r, g, b, _] = pixel.2 .0;
+            let [r, g, b, _] = pixel.2.0;
+            
             input[[0, 0, y, x]] = (r as f32) / 255.0;
             input[[0, 1, y, x]] = (g as f32) / 255.0;
             input[[0, 2, y, x]] = (b as f32) / 255.0;
         }
+        
         (input, img_width, img_height)
     }
-    fn run_model(&self, input: Array<f32, IxDyn>) -> Result<Array<f32, IxDyn>, ort::OrtError> {
+
+    fn prepare_input2(&self, img: DynamicImage) -> (ArrayBase<CowRepr<'_, f32>, Dim<IxDynImpl>>, u32, u32) {
+        let (img_width, img_height) = (img.width(), img.height());
+        let img = img.resize_exact(640, 640, FilterType::Nearest);
+        let image_buffer = img.to_rgb8();
+        let input = ndarray::CowArray::from(
+            ndarray::Array::from_shape_fn((1, 3, 640, 640), |(_, c, j, i)| {
+                let pixel = image_buffer.get_pixel(i as u32, j as u32);
+                let channels = pixel.channels();
+    
+                // range [0, 255] -> range [0, 1]
+                (channels[c] as f32) / 255.0
+            })
+            .into_dyn()
+        );
+        (input, img_width, img_height)
+    }
+
+    fn run_model(&self, input: ArrayBase<CowRepr<'_, f32>, Dim<IxDynImpl>>) -> Result<Array<f32, IxDyn>, ort::OrtError> {
         let input_as_values = &input.as_standard_layout();
         let model_inputs = vec![Value::from_array(self.model.allocator(), input_as_values)?];
         let outputs = self.model.run(model_inputs)?;
